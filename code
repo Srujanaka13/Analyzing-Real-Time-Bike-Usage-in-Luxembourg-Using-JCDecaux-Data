@@ -1,0 +1,227 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+# Load the dataset
+file_path = 'luxembourg_bike_data.csv'  
+bike_data = pd.read_csv('luxembourg_bike_data.csv')
+
+
+# Inspect column names
+print("Columns in the dataset:", bike_data.columns)
+
+# Check if 'last_update' exists and use it as a timestamp
+if 'last_update' in bike_data.columns:
+    bike_data['timestamp'] = pd.to_datetime(bike_data['last_update'])
+else:
+    print("No timestamp column found. Check your dataset structure.")
+
+# Display the first few rows
+print(bike_data.head())
+
+# Extract useful time features
+bike_data['hour'] = bike_data['timestamp'].dt.hour
+bike_data['day_of_week'] = bike_data['timestamp'].dt.dayofweek
+bike_data['day_name'] = bike_data['timestamp'].dt.day_name()
+
+# Temporal Analysis
+# 1. Average bike availability by hour
+hourly_availability = bike_data.groupby('hour')['available_bikes'].mean()
+
+# Plot hourly bike availability
+plt.figure(figsize=(10, 6))
+hourly_availability.plot(kind='line', marker='o')
+plt.title('Average Bike Availability by Hour', fontsize=14)
+plt.xlabel('Hour of Day', fontsize=12)
+plt.ylabel('Average Available Bikes', fontsize=12)
+plt.grid()
+plt.show()
+
+# 2. Average bike availability by day of the week
+daily_availability = bike_data.groupby('day_name')['available_bikes'].mean().reindex(
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+)
+
+# Plot daily bike availability
+plt.figure(figsize=(10, 6))
+daily_availability.plot(kind='bar', color='skyblue')
+plt.title('Average Bike Availability by Day of the Week', fontsize=14)
+plt.xlabel('Day of Week', fontsize=12)
+plt.ylabel('Average Available Bikes', fontsize=12)
+plt.xticks(rotation=45)
+plt.grid(axis='y')
+plt.show()
+
+# Station Analysis
+# 3. Stations with highest and lowest average availability
+station_availability = bike_data.groupby('name')['available_bikes'].mean().sort_values()
+
+# Top 5 and bottom 5 stations
+least_available_stations = station_availability.head(5)
+most_available_stations = station_availability.tail(5)
+
+print("Top 5 stations with the least availability:")
+print(least_available_stations)
+print("\nTop 5 stations with the most availability:")
+print(most_available_stations)
+
+# 4. Station utilization (percentage of bikes in use)
+bike_data['utilization'] = (1 - bike_data['available_bikes'] / bike_data['bike_stands']) * 100
+station_utilization = bike_data.groupby('name')['utilization'].mean().sort_values()
+
+# Save processed data for further analysis
+bike_data.to_csv('processed_luxembourg_bike_data.csv', index=False)
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Print column names to verify the correct name for timestamp column
+print("Column names in the dataset:")
+print(df.columns)
+
+# Clean column names to remove leading/trailing spaces (if necessary)
+df.columns = df.columns.str.strip()
+
+# Check if there's a 'timestamp' column or similar
+timestamp_column = None
+for col in df.columns:
+    if 'timestamp' in col.lower():  # Check for variations of 'timestamp' column name
+        timestamp_column = col
+        break
+
+if timestamp_column is None:
+    print("No column with 'timestamp' found. Please check your column names.")
+else:
+    print(f"Found timestamp column: {timestamp_column}")
+
+    # Convert 'timestamp' to datetime format
+    df[timestamp_column] = pd.to_datetime(df[timestamp_column], errors='coerce')  
+    print(f"Checking for missing values in the '{timestamp_column}' column:")
+    print(df[timestamp_column].isnull().sum())  
+    # Drop rows with missing datetime values
+    df = df.dropna(subset=[timestamp_column])
+
+    # Extract hour and weekday from the 'timestamp' column
+    df['hour'] = df[timestamp_column].dt.hour
+    df['weekday'] = df[timestamp_column].dt.weekday
+
+    # Check the size of the DataFrame
+    print(f"DataFrame size: {df.shape}")
+    
+    # Check if hour and station_id exist in the DataFrame
+    print(f"Columns in DataFrame: {df.columns}")
+    
+    # Define peak hours (e.g., 7-9 AM and 5-7 PM)
+    peak_hours = df[(df['hour'] >= 7) & (df['hour'] <= 9) | (df['hour'] >= 17) & (df['hour'] <= 19)]
+    
+    # Check the filtered data
+    print("Peak hours data:")
+    print(peak_hours.head())
+    
+    # Check bike availability during peak hours
+    peak_bike_availability = peak_hours.groupby(['hour', 'station_id'])['bike_count'].mean().reset_index()
+    
+    # Check the grouped data
+    print("Grouped bike availability during peak hours:")
+    print(peak_bike_availability.head())
+
+    # Plot bike availability during peak hours
+    if peak_bike_availability.shape[0] > 0:
+        plt.figure(figsize=(10, 6))
+        sns.boxplot(x='hour', y='bike_count', data=peak_bike_availability)
+        plt.title("Bike Availability During Peak Hours")
+        plt.xlabel("Hour of the Day")
+        plt.ylabel("Average Bike Availability")
+        plt.show()
+    else:
+        print("No data available for peak hours.")
+Column names in the dataset:
+Index(['number', 'name', 'address', 'bike_stands', 'available_bike_stands',
+       'available_bikes', 'status', 'last_update'],
+      dtype='object')
+No column with 'timestamp' found. Please check your column names.
+2. Bike Availability at Central vs. Residential Stations
+# Ensure the 'station_type' column is added to 'bike_data', not 'df'
+def classify_station(row):
+    central_keywords = ['center', 'mairie', 'gare', 'station']  
+    if any(keyword.lower() in row['address'].lower() for keyword in central_keywords):
+        return 'central'
+    else:
+        return 'residential'
+
+# Apply the classification function to 'bike_data'
+bike_data['station_type'] = bike_data.apply(classify_station, axis=1)
+
+# Now filter by 'station_type'
+central_stations = bike_data[bike_data['station_type'] == 'central']
+residential_stations = bike_data[bike_data['station_type'] == 'residential']
+
+# Compare average bike availability between central and residential stations
+central_bike_availability = central_stations.groupby('name')['available_bikes'].mean().reset_index()
+residential_bike_availability = residential_stations.groupby('name')['available_bikes'].mean().reset_index()
+
+# Combine both central and residential data for plotting
+combined_bike_availability = pd.concat([central_bike_availability.assign(station_type='central'),
+                                        residential_bike_availability.assign(station_type='residential')])
+
+# Plot comparison
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='station_type', y='available_bikes', data=combined_bike_availability)
+plt.title("Bike Availability: Central vs Residential Stations")
+plt.xlabel("Station Type")
+plt.ylabel("Average Bike Availability")
+plt.show()
+3. Bike Usage Difference Between Weekdays and Weekends
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Check column names to identify the correct timestamp column
+print("Column names in the dataset:")
+print(df.columns)
+
+# Assuming the column name for the timestamp is 'datetime' or 'date_time' or 'timestamp' 
+
+for col in df.columns:
+    if 'datetime' in col.lower(): 
+        timestamp_column = col
+        break
+
+if timestamp_column is None:
+    print("No column with 'datetime' found. Please check your column names.")
+else:
+    print(f"Found timestamp column: {timestamp_column}")
+
+    # Convert the identified timestamp column to datetime format
+    df[timestamp_column] = pd.to_datetime(df[timestamp_column], errors='coerce') 
+
+    # Check for missing values in the timestamp column
+    print(f"Checking for missing values in the '{timestamp_column}' column:")
+    print(df[timestamp_column].isnull().sum()) 
+    # Drop rows with missing datetime values
+    df = df.dropna(subset=[timestamp_column])
+
+    # Extract weekday information (Monday=0, Sunday=6)
+    df['weekday'] = df[timestamp_column].dt.weekday
+
+    # Create 'day_type' column: Weekdays (0-4) and Weekends (5-6)
+    df['day_type'] = df['weekday'].apply(lambda x: 'Weekend' if x >= 5 else 'Weekday')
+
+    # Check the data types and first few rows to ensure proper conversion
+    print("Data types after conversion:")
+    print(df.dtypes)
+    print("First few rows after processing:")
+    print(df.head())
+
+    # Compare bike usage between weekdays and weekends
+    weekday_usage = df[df['day_type'] == 'Weekday'].groupby(timestamp_column)['bike_count'].mean().reset_index()
+    weekend_usage = df[df['day_type'] == 'Weekend'].groupby(timestamp_column)['bike_count'].mean().reset_index()
+
+    # Plot comparison
+    plt.figure(figsize=(10, 6))
+    plt.plot(weekday_usage[timestamp_column], weekday_usage['bike_count'], label='Weekdays', color='blue')
+    plt.plot(weekend_usage[timestamp_column], weekend_usage['bike_count'], label='Weekends', color='red')
+    plt.title("Bike Usage: Weekdays vs Weekends")
+    plt.xlabel("Timestamp")
+    plt.ylabel("Average Bike Usage")
+    plt.legend()
+    plt.show()
